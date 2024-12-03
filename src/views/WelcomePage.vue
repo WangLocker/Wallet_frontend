@@ -42,7 +42,7 @@
             <el-tab-pane label="账号登录" name="account">
               <el-form :model="loginForm" :rules="rules" ref="loginForm" @submit.prevent="handleLogin">
                 <el-form-item label="邮箱" prop="account">
-                  <el-input v-model="loginForm.account" placeholder="请输入账号（email）" />
+                  <el-input v-model="loginForm.account" placeholder="请输入账号（email/phone）" />
                 </el-form-item>
                 <el-form-item label="密码" prop="password">
                   <el-input v-model="loginForm.password" placeholder="请输入密码" type="password" />
@@ -77,8 +77,21 @@ export default {
         password: "",
       },
       rules: {
-        account: [{required: true, message: "email(账户名)不能为空", trigger: "blur"},
-                  { type: "email", message: "请输入有效的邮箱地址", trigger: "blur" },],
+        account: [
+                    { required: true, message: "账户名不能为空", trigger: "blur" },
+                    {
+                      validator: (rule, value, callback) => {
+                        const isEmail = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/.test(value);
+                        const isPhoneNumber = /^\d{11}$/.test(value);
+                        if (!isEmail && !isPhoneNumber) {
+                          callback(new Error("账户名必须为有效的邮箱地址或电话"));
+                        } else {
+                          callback();
+                        }
+                      },
+                      trigger: "blur"
+                    }
+                  ],
         password: [{required: true, message: "密码不能为空", trigger: "blur"},
                     { min: 6, message: "密码至少为6位", trigger: "blur" }]
       }
