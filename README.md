@@ -1,7 +1,9 @@
 # payment
 
 ## Project setup
+使用ustc镜像，
 ```
+pnpm config set registry https://registry.npmmirror.com
 pnpm install
 ```
 
@@ -13,11 +15,6 @@ pnpm run serve
 ### Compiles and minifies for production
 ```
 pnpm run build
-```
-
-### Lints and fixes files
-```
-pnpm run lint
 ```
 
 ### Customize configuration
