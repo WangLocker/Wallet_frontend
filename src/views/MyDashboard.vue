@@ -173,7 +173,7 @@
 
           <div style="height: 45vh">
             <el-row style="height: 45vh; display: flex; flex-direction: column; justify-content: space-between;">
-              <a-card>
+              <a-card class="summary">
                 <a-statistic
                     title="月度交易笔数"
                     :value="116"
@@ -185,7 +185,7 @@
                   </template>
                 </a-statistic>
               </a-card>
-              <a-card>
+              <a-card class="summary">
                 <a-statistic
                     title="月度收款总额"
                     :value="622"
@@ -199,7 +199,7 @@
                   </template>
                 </a-statistic>
               </a-card>
-              <a-card>
+              <a-card class="summary">
                 <a-statistic
                     title="月度转出总额"
                     :value="255"
@@ -214,7 +214,6 @@
                 </a-statistic>
               </a-card>
             </el-row>
-
           </div>
 
 
@@ -407,6 +406,7 @@ export default {
   padding: 16px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  height: 100%;
 }
 
 /* 卡片样式 */
@@ -417,6 +417,7 @@ export default {
   border-radius: 4px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   text-align: center;
+  height: auto;
 }
 
 .card-cover {
@@ -460,5 +461,15 @@ export default {
   border-radius: 4px;
   white-space: nowrap; /* 防止换行 */
   text-align: center;
+}
+
+.summary {
+  flex: 1; /* 平均分配空间 */
+  background: white;
+  padding: 5px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  white-space: nowrap; /*避免换行*/
+  height: 30%
 }
 </style>
