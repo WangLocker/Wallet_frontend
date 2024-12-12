@@ -14,7 +14,8 @@
     "jsencrypt": "^3.3.2",
     "pinia": "^2.1.0",
     "vue": "^3.2.13",
-    "vue-router": "^4.1.6"
+    "vue-router": "^4.1.6",
+    "ant-design-vue": "4.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",
