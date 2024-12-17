@@ -4,29 +4,83 @@
     <a-page-header
         class="page-header"
         style="border: 1px solid rgb(235, 237, 240)"
-        title="Dashboard"
+        :title="`Dashboard - ${nowUser}`"
         sub-title="在这里您可以查看、验证您的用户信息并发起转账和收款。"
     >
       <template #extra>
-        <a-button key="1" type="primary" danger ghost>Log out</a-button>
+        <a-button key="1" type="primary" @click="handleLogout" danger ghost>Log out</a-button>
       </template>
     </a-page-header>
 
     <a-layout-content class="content">
       <el-dialog
-          title="验证银行卡"
-          v-model:visible="dialogOfcardVerifyVisible"
+          :title="`验证银行卡 - ${last_op_card || ''}`"
+          v-model="dialogOfcardVerifyVisible"
           width="30%"
           center
       >
         <span>请输入邮箱验证码：</span>
         <el-input v-model="emailCode" placeholder="请输入验证码"></el-input>
         <template v-slot:footer>
-      <el-button @click="dialogOfcardVerifyVisible = false">取消</el-button>
-      <el-button type="primary" @click="verifyCodeAndUpdateStatus">提交</el-button>
+          <el-button @click="dialogOfcardVerifyVisible = false">取消</el-button>
+          <el-button type="primary" @click="verifyCodeAndUpdateStatus(last_op_card)">提交</el-button>
         </template>
-
       </el-dialog>
+      
+      <el-dialog
+        :title="`发起转账 - ${nowUser}`"
+        v-model="dialogOfPayVisible"
+        width="30%"
+        center
+      >
+        <span>转账信息：</span>
+        <el-form :model="payForm" :rules="rules" ref="payForm" label-width="120px" @submit.prevent="handlePaySubmit">
+          <el-form-item label="收款方信息类型" prop="payeeType">
+            <el-radio-group v-model="payForm.payeeType">
+              <el-radio label="email">邮箱</el-radio>
+              <el-radio label="phone">电话号码</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="收款方信息" prop="infoPayee">
+            <el-input v-model="payForm.infoPayee" :placeholder="payForm.payeeType === 'email' ? '请输入收款方邮箱' : '请输入收款方电话号码'"></el-input>
+          </el-form-item>
+          <el-form-item label="转账金额" prop="amount">
+            <el-input v-model="payForm.amount" placeholder="转账金额"></el-input>
+          </el-form-item>
+          <el-form-item label="备注" prop="memo">
+            <el-input v-model="payForm.memo" placeholder="备注(可选)"></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" block @click="handlePaySubmit">提交转账</el-button>
+            <el-button @click="dialogOfPayVisible = false">取消</el-button>
+          </el-form-item>
+        </el-form>
+      </el-dialog>
+
+      <el-dialog
+        title="转账信息"
+        v-model="payOutVisible"
+        width="30%"
+        center
+      >
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="转账编号">{{ payOutForm.p_id }}</el-descriptions-item>
+        <el-descriptions-item label="发送方 ID">{{ payOutForm.p_sender_id }}</el-descriptions-item>
+        <el-descriptions-item label="接收方 ID">{{ payOutForm.p_recipient_id }}</el-descriptions-item>
+        <el-descriptions-item label="收款方信息">{{ payOutForm.p_recipient_email_or_phone }}</el-descriptions-item>
+        <el-descriptions-item label="收款方类型">{{ payOutForm.p_recipient_type }}</el-descriptions-item>
+        <el-descriptions-item label="转账金额">{{ parseFloat(payOutForm.p_amount).toFixed(2) }} $</el-descriptions-item>
+        <el-descriptions-item label="备注">{{ payOutForm.p_memo }}</el-descriptions-item>
+        <el-descriptions-item label="状态">{{ payOutForm.p_status }}</el-descriptions-item>
+        <el-descriptions-item label="发起时间">{{ payOutForm.p_initiated_at }}</el-descriptions-item>
+        <el-descriptions-item label="完成时间">{{ payOutForm.p_completed_at }}</el-descriptions-item>
+        <el-descriptions-item label="取消原因">{{ payOutForm.p_cancellation_reason }}</el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="payOutVisible = false">关闭</el-button>
+      </template>
+      </el-dialog>
+
       <div class="container-a">
         <div class="container-b">
           <a-card hoverable style="width: 30%;height: 45vh">
@@ -176,7 +230,7 @@
               <a-card class="summary">
                 <a-statistic
                     title="月度交易笔数"
-                    :value="116"
+                    :value="stats.transCount"
                     :value-style="{ color: '#267af1' }"
                     style="margin-right: 50px"
                 >
@@ -188,7 +242,7 @@
               <a-card class="summary">
                 <a-statistic
                     title="月度收款总额"
-                    :value="622"
+                    :value="stats.totalReceived"
                     :precision="2"
                     suffix="$"
                     :value-style="{ color: '#3f8600' }"
@@ -202,7 +256,7 @@
               <a-card class="summary">
                 <a-statistic
                     title="月度转出总额"
-                    :value="255"
+                    :value="stats.totalTransferred"
                     :precision="2"
                     suffix="$"
                     :value-style="{ color: '#c94141' }"
@@ -215,8 +269,6 @@
               </a-card>
             </el-row>
           </div>
-
-
         </div>
 
       </div>
@@ -231,75 +283,229 @@ export default {
   data() {
     return {
       dialogOfcardVerifyVisible: false,
-      tableData: [{
-        card_num: '1111111111111111',
-        status: '状态正常',
-        bank: '志邈银行'
-      },
-        {
-          card_num: '1111111111111111',
-          status: '状态异常',
-          bank: '志邈银行'
-        },
+      dialogOfPayVisible: false,
+      dialogOfFetchVisible: false,
+      dialogOfTransVisible: false,
+      payOutVisible: true,
+      tableData: [
         {
           card_num: '1111111111111111',
           status: '点此验证',
           bank: '志邈银行'
-        },
-        {
-          card_num: '1111111111111111',
-          status: '点此验证',
-          bank: '志邈银行'
-        }],
-      tableData_trans:[{trans_num: '1234567890', status: 'pending'},
-        {trans_num: '1234567890', status: 'expired'},
-        {trans_num: '1234567890', status: 'complete'}],
+        }
+      ],
+        // 状态正常 | 点此验证
+        // {
+        //   card_num: '1111111111111111',
+        //   status: '状态正常',
+        //   bank: '志邈银行'
+        // },
+      tableData_trans:[{trans_num: '1234567890', status: 'complete'}],
+        // { trans_num: '1234567890', status: 'expired'},
       main_card: { 'card_prio': 0, 'card_num': '0000000000000000', 'card_status': 1 },
-      other_cards: [
-        { 'card_prio': 1, 'card_num': '1111111111111111', 'card_status': 0 },
-        { 'card_prio': 1, 'card_num': '2222222222222222', 'card_status': 1 },
-        { 'card_prio': 1, 'card_num': '2222222222222222', 'card_status': 2 },
-      ]
+        // 0 正常 1 验证 其他 异常
+        // { 'card_prio': 0, 'card_num': '0000000000000000', 'card_status': 1 }
+      other_cards: [{ 'card_prio': 1, 'card_num': '1111111111111111', 'card_status': 0 }],
+        // { 'card_prio': 1, 'card_num': '1111111111111111', 'card_status': 0 }
+      stats: {
+        transCount: 0, //月度交易笔数
+        totalReceived: 1.0, //收款总额
+        totalTransferred: 2.0 //转出总额
+        },
+      last_op_card: -1,  // 保存上次操作的card_number
+      emailCode: '',     // 保存中间输入
+      nowUser: 'None',   // 保存当前用户
+      payForm: {
+        infoPayee: '',
+        payeeType: 'email',
+        amount: '',
+        memo: ''
+      },
+      payOutForm: {
+        p_id: '1',
+        p_sender_id: '2',
+        p_recipient_id: '3',
+        p_recipient_email_or_phone: '4',
+        p_recipient_type: '5',
+        p_amount: '10',
+        p_memo: '6',
+        p_status: '7',
+        p_initiated_at: '8',
+        p_completed_at: '9',
+        p_cancellation_reason: '0'
+      },
+      rules: {
+        infoPayee: [
+          { required: true, message: '收款方不能为空', trigger: 'blur'},
+          { 
+            validator: (rule, value, callback) => {
+              if (this.payForm.payeeType === 'email') {
+                const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+                if (!emailRegex.test(value)) {
+                  callback(new Error('请输入有效的邮箱地址'));
+                } else {
+                  callback();
+                }
+              } else if (this.payForm.payeeType === 'phone') {
+                const phoneRegex = /^\d{11}$/;
+                if (!phoneRegex.test(value)){
+                  callback(new Error('手机号必须为11位纯数字'));
+                } else {
+                  callback();
+                }
+              }
+            },
+            trigger: 'blur'
+          }
+        ]
+      }
     };
   },
   mounted() {
+    //检查是否有登录
+    const loggedInUser = localStorage.getItem("loggedInUser");
+    if (loggedInUser) {
+      const userInfo = JSON.parse(loggedInUser);
+      this.nowUser = userInfo.username;
+    } else {
+      this.$router.push("/");
+    }
     //组件第一次挂载时，向后端发送请求获取一次原始信息，然后每三十秒获取一次
-    this.fetchData(); // 在组件挂载时先执行一次获取数据的逻辑
+    this.fetchTransData(); // 在组件挂载时先执行一次获取数据的逻辑
+    this.fetchCardData();
+    this.fetchStatisticalData();
     this.intervalId = setInterval(() => {
-      this.fetchData(); // 每30秒执行一次获取数据的逻辑
-    }, 30000); // 时间间隔为30秒，单位是毫秒
+      this.fetchTransData(); // 每30秒执行一次获取数据的逻辑
+      this.fetchCardData();
+      this.fetchStatisticalData();
+    }, 30000); // 时间间隔为3秒，单位是毫秒
   },
   beforeUnmount() {
     clearInterval(this.intervalId); // 在组件销毁前清除定时器，避免内存泄漏
   },
   methods: {
-    fetchData() {
-      axios.get('/api/getTransactionData') // 根据实际后端接口调整URL
+    fetchTransData() {
+      axios.get('/api/getTransactionData', this.nowUser) // 根据实际后端接口调整URL
+        // 发回的数据包格式
           .then((response) => {
             this.tableData_trans = response.data;
           })
           .catch((error) => {
-            console.error('获取事务数据出错：', error);
+            //this.$message.error("获取事务数据出错" + error.message);
+            console.error('-', error);
           });
+    },
+    fetchCardData(){
+      axios.get('/api/getCardData', this.nowUser) // URL至后端
+        .then((response) => {
+          const {main_card, tableData, other_cards} = response.data;
+          this.main_card = main_card;
+          this.tableData = tableData;
+          this.other_cards = other_cards;
+        })
+        .catch((error) => {
+          //this.$message.error("获取卡数据出错" + error.message);
+          console.error('-', error);
+        });
+    },
+    fetchStatisticalData(){
+      axios.get('/api/getMonthlyStats', this.nowUser) // URL至后端
+        .then((response) => {
+          const { transCount, totalReceived, totalTransferred } = response.data;
+          this.stats.transCount = transCount
+          this.stats.totalReceived = totalReceived
+          this.stats.totalTransferred = totalTransferred
+        })
+        .catch((error) => {
+          //this.$message.error("获取统计数据出错" + error.message);
+          console.error('-', error);
+        });
     },
     handleVerifyClick(cardNum) {
       console.log(cardNum)
+      this.last_op_card = cardNum
       this.dialogOfcardVerifyVisible=true
     },
+    verifyCodeAndUpdateStatus(cardNum) {
+      this.emailCode = ''
+      axios.post('/api/verifyCardStatus', {
+        cardNum: cardNum
+      }) // URL至后端
+      .then((response) => {
+      // 处理成功响应
+      if (response.data.success) {
+        this.$message.success("银行卡验证成功");
+        this.dialogOfcardVerifyVisible = false; // 关闭对话框
+        this.fetchCardData(); // 更新卡片状态
+      } else {
+        this.$message.error(response.data.message || "验证码错误，请重试");
+      }
+      })
+      .catch((error) => {
+        alert('银行卡状态更新失败：' + error.message);
+      });
+    },
     handleLogout() {
-      console.log('Logout clicked');
+      axios.post("/logout", this.nowUser) //URL
+        .then(response => {
+          if (response.status === 200){
+            this.$message.success("登出成功！");
+            localStorage.removeItem("loggedInUser");
+            localStorage.removeItem("token");
+            this.$router.push("/");
+          }else{
+            this.$message.error("登出失败！");
+          }
+        })      
+        .catch((error) => {
+          this.$message.error("服务器错误" + error.message);
+        });
     },
     handlePayClick() {
+      // 转账
       console.log('点击了发起转账卡片');
+      this.dialogOfPayVisible = true;
     },
     handleFetchClick() {
+      // 发起收款
       console.log('点击了发起收款卡片');
+      this.dialogOfFetchVisible = true;
     },
     handleTransClick(){
-
+      // 处理请求
+      console.log('点击了处理请求卡片');
+      this.dialogOfTransVisible = true;
     },
     handleGetDetail(transNum) {
+      // 事务详情
       console.log(transNum)
+    },
+    async handlePaySubmit() {
+      //处理转账事务
+      console.log('提交转账');
+      this.$refs.payForm.validate((valid) => {
+        if (valid) {
+          axios.post("/paysubmit", {
+          username: this.nowUser,
+          payForm:  this.payForm
+          })//URL
+          .then(response => {
+            if (response.status === 200){
+              this.$message.error("转账成功 ");
+              this.payOutForm = response.data;
+              this.payOutVisible = true;
+              this.dialogOfPayVisible = false;
+            }else{
+              this.$message.error("转账失败 "+response.data);
+            }
+          })
+          .catch((error) => {
+              this.$message.error("服务器错误" + error.message);
+          });
+        } else {
+          this.$message.error('请填写完整信息！');
+        }
+      });
     }
   }
 };
