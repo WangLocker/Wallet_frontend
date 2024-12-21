@@ -9,6 +9,9 @@
     >
       <template #extra>
         <a-button key="1" type="primary" @click="handleLogout" danger ghost>Log out</a-button>
+        <el-button @click="handleAddCard()" type="primary">
+                    添加卡
+        </el-button>
       </template>
     </a-page-header>
 
@@ -79,6 +82,154 @@
       <template #footer>
         <el-button @click="payOutVisible = false">关闭</el-button>
       </template>
+      </el-dialog>
+
+      <el-dialog
+        title="收款信息"
+        v-model="fetchOutVisible"
+        width="30%"
+        center
+      >
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="收款编号">{{ fetchOutForm.f_id }}</el-descriptions-item>
+        <el-descriptions-item label="需求方 ID">{{ fetchOutForm.f_requester_id }}</el-descriptions-item>
+        <el-descriptions-item label="付款方 ID">{{ fetchOutForm.f_recipient_id }}</el-descriptions-item>
+        <el-descriptions-item label="付款方信息">{{ fetchOutForm.f_recipient_email_or_phone }}</el-descriptions-item>
+        <el-descriptions-item label="收款金额">{{ parseFloat(fetchOutForm.f_amount).toFixed(2) }} $</el-descriptions-item>
+        <el-descriptions-item label="备注">{{ fetchOutForm.f_memo }}</el-descriptions-item>
+        <el-descriptions-item label="状态">{{ fetchOutForm.f_status }}</el-descriptions-item>
+        <el-descriptions-item label="发起时间">{{ fetchOutForm.f_initiated_at }}</el-descriptions-item>
+        <el-descriptions-item label="完成时间">{{ fetchOutForm.f_completed_at }}</el-descriptions-item>
+      </el-descriptions>
+        <div v-for="(payer, index) in fetchOutForm.f_extraPayers" :key="index">
+          <el-divider content-position="left">付款方 {{ index + 2 }}</el-divider>
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="收款编号">{{ payer.f_id }}</el-descriptions-item>
+          <el-descriptions-item label="需求方 ID">{{ payer.f_requester_id }}</el-descriptions-item>
+          <el-descriptions-item label="付款方 ID">{{ payer.f_recipient_id }}</el-descriptions-item>
+          <el-descriptions-item label="收款金额">{{ parseFloat(payer.f_amount).toFixed(2) }} $</el-descriptions-item>
+        </el-descriptions>
+        </div>
+      <template #footer>
+        <el-button @click="fetchOutVisible = false">关闭</el-button>
+      </template>
+      </el-dialog>
+
+      <el-dialog
+      :title="`处理请求-${nowUser}`"
+      v-model="dialogOfTransVisible"
+      width="30%"
+      center
+      >
+      <div v-for="(trans, index) in transForm" :key="index">
+        <el-divider content-position="left">请求 {{ index + 1 }}</el-divider>
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="收款编号">{{ trans.t_id }}</el-descriptions-item>
+          <el-descriptions-item label="需求方 ID">{{ trans.t_requester_id }}</el-descriptions-item>
+          <el-descriptions-item label="付款方 ID">{{ trans.t_recipient_id }}</el-descriptions-item>
+          <el-descriptions-item label="收款金额">{{ parseFloat(trans.t_amount).toFixed(2) }} $</el-descriptions-item>
+          <el-descriptions-item label="备注">{{ trans.t_memo }}</el-descriptions-item>
+        </el-descriptions>
+        <el-button @click="handleTrans(index)" type="primary" center>
+                    处理付款
+        </el-button>
+      </div>
+      <template #footer>
+        <el-button @click="dialogOfTransVisible = false">关闭</el-button>
+      </template>
+      </el-dialog>
+
+      <el-dialog
+      :title="`发起收款-${nowUser}`"
+      v-model="dialogOfFetchVisible"
+      width="30%"
+      center
+      >
+        <span>收款信息：</span>
+        <el-form :model="fetchForm" :rules="rules" ref="fetchForm" label-width="120px" @submit.prevent="handlePaySubmit">
+          <el-form-item label="付款方信息类型" prop="fetcheeType">
+            <el-radio-group v-model="fetchForm.fetcheeType">
+              <el-radio label="email">邮箱</el-radio>
+              <el-radio label="phone">电话号码</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="付款方信息" prop="infofetchee">
+            <el-input v-model="fetchForm.infofetchee" :placeholder="fetchForm.fetcheeType === 'email' ? '请输入付款方邮箱' : '请输入付款方电话号码'"></el-input>
+          </el-form-item>
+          <el-form-item label="收款金额" prop="amount">
+            <el-input v-model="fetchForm.amount" placeholder="收款金额"></el-input>
+          </el-form-item>
+          <el-form-item label="添加">
+            <el-button type="primary" @click="addNewPayer">+</el-button>
+          </el-form-item>
+            <div v-for="(payer, index) in fetchForm.extraPayers" :key="index">
+              <el-divider content-position="left">付款方 {{ index + 2 }}</el-divider>
+                <el-form-item label="付款方信息类型">
+                  <el-radio-group v-model="payer.fetcheeType">
+                    <el-radio label="email">邮箱</el-radio>
+                    <el-radio label="phone">电话号码</el-radio>
+                  </el-radio-group>
+                </el-form-item>
+                <el-form-item label="付款方信息" :prop="`extraPayers[${index}].infofetchee`" :rules="dynamicRules[index]?.infofetchee">
+                  <el-input v-model="payer.infofetchee" :placeholder="payer.fetcheeType === 'email' ? '请输入付款方邮箱' : '请输入付款方电话号码'"></el-input>
+                </el-form-item>
+                <el-form-item label="收款金额">
+                  <el-input v-model="payer.amount" placeholder="收款金额"></el-input>
+                </el-form-item>
+                <el-form-item label="删除">
+                  <el-button type="danger" @click="removePayer(index)">-</el-button>
+                </el-form-item>
+            </div>
+          <el-form-item label="备注" prop="memo">
+            <el-input v-model="fetchForm.memo" placeholder="备注(可选)"></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" block @click="handleFetchSubmit">提交收款</el-button>
+            <el-button @click="dialogOfFetchVisible = false">取消</el-button>
+          </el-form-item>
+        </el-form>
+      </el-dialog>
+
+      <el-dialog
+        :title="`事务详情 ${queryForm.q_id}`"
+        v-model="dialogOfQuery"
+        width="30%"
+        center
+      >
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="发送方 ID">{{ queryForm.q_sender }}</el-descriptions-item>
+        <el-descriptions-item label="接收方 ID">{{ queryForm.q_receiver }}</el-descriptions-item>
+        <el-descriptions-item label="事务类型">{{ queryForm.q_type }}</el-descriptions-item>
+        <el-descriptions-item label="金额">{{ parseFloat(queryForm.q_amount).toFixed(2) }} $</el-descriptions-item>
+        <el-descriptions-item label="备注">{{ queryForm.q_memo }}</el-descriptions-item>
+        <el-descriptions-item label="状态">{{ queryForm.q_status }}</el-descriptions-item>
+        <el-descriptions-item label="发起时间">{{ queryForm.q_initiated_at }}</el-descriptions-item>
+        <el-descriptions-item label="完成时间">{{ queryForm.q_completed_at }}</el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="dialogOfQuery = false">关闭</el-button>
+      </template>
+      </el-dialog>
+
+      <el-dialog
+        title="银行卡信息，首次添加默认主卡"
+        v-model="dialogOfAddCard"
+        width="30%"
+        center
+      >
+        <span>银行卡信息</span>
+        <el-form :model="addCardData" label-width="120px" @submit.prevent="addCard">
+          <el-form-item label="银行名称" prop="amount">
+            <el-input v-model="addCardData.a_bank_id" placeholder="银行名称"></el-input>
+          </el-form-item>
+          <el-form-item label="卡号" prop="memo">
+            <el-input v-model="addCardData.a_account_num" placeholder="卡号"></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" block @click="addCard">添加</el-button>
+            <el-button @click="dialogOfAddCard = false">取消</el-button>
+          </el-form-item>
+        </el-form>
       </el-dialog>
 
       <div class="container-a">
@@ -286,7 +437,10 @@ export default {
       dialogOfPayVisible: false,
       dialogOfFetchVisible: false,
       dialogOfTransVisible: false,
-      payOutVisible: true,
+      dialogOfQuery: false,
+      dialogOfAddCard: true,
+      payOutVisible: false,
+      fetchOutVisible: false,
       tableData: [
         {
           card_num: '1111111111111111',
@@ -334,31 +488,65 @@ export default {
         p_completed_at: '9',
         p_cancellation_reason: '0'
       },
+      fetchForm: {
+        infofetchee: '',
+        fetcheeType: 'email',
+        amount: '',
+        memo: '',
+        extraPayers: []
+      },
+      fetchOutForm: {
+        f_id: '1',
+        f_requester_id: '2',
+        f_recipient_id: '3',
+        f_recipient_email_or_phone: '4',
+        f_amount: '5',
+        f_memo: '6',
+        f_status: '7',
+        f_initiated_at: '8',
+        f_completed_at: '9',
+        f_extraPayers: []
+      },
+      transForm: [
+      {t_id: '1', t_requester_id: '2', t_recipient_id: '3', t_amount: '4', t_memo: '5'},
+      {t_id: '2', t_requester_id: '3', t_recipient_id: '4', t_amount: '5', t_memo: '6'}
+      ],
+      queryForm: {
+        q_id: '0',
+        q_sender: '1',
+        q_receiver: '2',
+        q_type: 'payment',
+        q_amount: '3',
+        q_memo: '4',
+        q_status: '5',
+        q_initiated_at: '6',
+        q_completed_at: '7'
+      },
+      addCardData: {
+        a_bank_id: '',
+        a_account_num: '',
+      },
       rules: {
         infoPayee: [
           { required: true, message: '收款方不能为空', trigger: 'blur'},
           { 
             validator: (rule, value, callback) => {
-              if (this.payForm.payeeType === 'email') {
-                const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
-                if (!emailRegex.test(value)) {
-                  callback(new Error('请输入有效的邮箱地址'));
-                } else {
-                  callback();
-                }
-              } else if (this.payForm.payeeType === 'phone') {
-                const phoneRegex = /^\d{11}$/;
-                if (!phoneRegex.test(value)){
-                  callback(new Error('手机号必须为11位纯数字'));
-                } else {
-                  callback();
-                }
-              }
+              this.typeCheck(rule, value, callback, this.payForm.payeeType);
+            },
+            trigger: 'blur'
+          }
+        ],
+        infofetchee: [
+          { required: true, message: '付款方不能为空', trigger: 'blur'},
+          { 
+            validator: (rule, value, callback) => {
+              this.typeCheck(rule, value, callback, this.fetchForm.fetcheeType);
             },
             trigger: 'blur'
           }
         ]
-      }
+      },
+      dynamicRules: []
     };
   },
   mounted() {
@@ -385,7 +573,7 @@ export default {
   },
   methods: {
     fetchTransData() {
-      axios.get('/api/getTransactionData', this.nowUser) // 根据实际后端接口调整URL
+      axios.get('/qry/getTransactionData', this.nowUser) // 根据实际后端接口调整URL
         // 发回的数据包格式
           .then((response) => {
             this.tableData_trans = response.data;
@@ -395,8 +583,9 @@ export default {
             console.error('-', error);
           });
     },
+
     fetchCardData(){
-      axios.get('/api/getCardData', this.nowUser) // URL至后端
+      axios.get('/qry/getCardData', this.nowUser) // URL至后端
         .then((response) => {
           const {main_card, tableData, other_cards} = response.data;
           this.main_card = main_card;
@@ -408,8 +597,9 @@ export default {
           console.error('-', error);
         });
     },
+
     fetchStatisticalData(){
-      axios.get('/api/getMonthlyStats', this.nowUser) // URL至后端
+      axios.get('/qry/getMonthlyStats', this.nowUser) // URL至后端
         .then((response) => {
           const { transCount, totalReceived, totalTransferred } = response.data;
           this.stats.transCount = transCount
@@ -421,11 +611,13 @@ export default {
           console.error('-', error);
         });
     },
+
     handleVerifyClick(cardNum) {
-      console.log(cardNum)
-      this.last_op_card = cardNum
-      this.dialogOfcardVerifyVisible=true
+      console.log(cardNum);
+      this.last_op_card = cardNum;
+      this.dialogOfcardVerifyVisible=true;
     },
+
     verifyCodeAndUpdateStatus(cardNum) {
       this.emailCode = ''
       axios.post('/api/verifyCardStatus', {
@@ -445,8 +637,9 @@ export default {
         alert('银行卡状态更新失败：' + error.message);
       });
     },
+
     handleLogout() {
-      axios.post("/logout", this.nowUser) //URL
+      axios.post("/api/logout", this.nowUser) //URL
         .then(response => {
           if (response.status === 200){
             this.$message.success("登出成功！");
@@ -461,37 +654,123 @@ export default {
           this.$message.error("服务器错误" + error.message);
         });
     },
+
     handlePayClick() {
       // 转账
       console.log('点击了发起转账卡片');
       this.dialogOfPayVisible = true;
     },
+    
     handleFetchClick() {
       // 发起收款
       console.log('点击了发起收款卡片');
       this.dialogOfFetchVisible = true;
     },
+
     handleTransClick(){
       // 处理请求
       console.log('点击了处理请求卡片');
-      this.dialogOfTransVisible = true;
+      if(this.getRequest(this.nowUser)) {this.dialogOfTransVisible = true;}
     },
+
+    getRequest(user) {
+      // 获取与当前id有关的请求
+      axios.post('/api/getRequest', user)
+      .then((response) => {
+        if (response.status === 200) {
+          this.transForm = response.data;
+          if(response.data.length === 0) 
+          { this.$message.error('暂无请求')
+            return false;}
+          return true;
+        } else {
+          this.$message.error('获取失败')
+          return false;
+        }
+      })
+      .catch((error) => {
+        alert('请求错误 '+error.message);
+        return false;
+      })
+    },
+
     handleGetDetail(transNum) {
       // 事务详情
-      console.log(transNum)
+      console.log(transNum);
+      axios.get('/api/getDetail', {
+        User: this.nowUser,
+        transNum: transNum
+      })
+      .then(response => {
+        if(response.status === 200) {
+          this.queryForm = response.data;
+          this.dialogOfQuery = true;
+        }else{
+          this.$message.error("查询失败，请稍后重试");
+        }
+      })
+      .catch((error) => {
+        this.$message.error('服务器错误 '+error.message);
+      })
     },
+
+    handleAddCard() {
+      // 添加银行卡
+      console.log('点击了添加银行卡');
+      this.dialogOfAddCard = true;
+    },
+
+    addCard() {
+      axios.post('/api/addCard', {
+        User: this.nowUser,
+        CardData: this.addCardData
+      })
+      .then(response => {
+        if(response.status === 200) {
+          this.fetchCardData();
+          this.dialogOfAddCard = false;
+        }else{
+          this.$message.error("添加失败，请检查信息后重试");
+        }
+      })
+      .catch((error) => {
+        this.$message.error('服务器错误 '+error.message);
+      })
+    },
+
+    handleTrans(index) {
+      // 处理事务
+      console.log('点击了处理事务' + index);
+      axios.post('/api/handleTrans', {
+        User: this.nowUser,
+        Trans: this.transForm[index]
+      })
+      .then(response => {
+        if(response.status === 200) {
+          this.$message.success("处理成功");
+          this.getRequest(this.nowUser)
+        }else{
+          this.$message.error("处理失败，请检查你的余额或稍后重试");
+        }
+      })
+      .catch((error) => {
+        this.$message.error('服务器错误 '+error.message);
+        return false;
+      })
+    },
+
     async handlePaySubmit() {
       //处理转账事务
       console.log('提交转账');
       this.$refs.payForm.validate((valid) => {
         if (valid) {
-          axios.post("/paysubmit", {
+          axios.post("/req/paysubmit", {
           username: this.nowUser,
           payForm:  this.payForm
           })//URL
           .then(response => {
             if (response.status === 200){
-              this.$message.error("转账成功 ");
+              this.$message.success("转账成功");
               this.payOutForm = response.data;
               this.payOutVisible = true;
               this.dialogOfPayVisible = false;
@@ -500,12 +779,137 @@ export default {
             }
           })
           .catch((error) => {
-              this.$message.error("服务器错误" + error.message);
+              this.$message.error("服务器错误 " + error.message);
           });
         } else {
           this.$message.error('请填写完整信息！');
         }
       });
+    },
+
+    handleFetchSubmit() {
+      // 处理收款事务
+      console.log('提交收款');
+      if (this.fetchForm.extraPayers.length === 0) {
+        // 处理单收款事务
+        this.$refs.fetchForm.validate((valid) =>{
+          if (valid) {
+            axios.post("/api/singleFetch", {
+              username: this.nowUser,
+              fetchForm:this.fetchForm
+            })//URL
+            .then(response =>{
+              if (response.status === 200){
+                this.$message.success("收款成功");
+                this.fetchOutForm = response.data;
+                this.fetchOutVisible = true;
+                this.dialogOfFetchVisible = false;
+              }else{
+                this.$message.error("转账失败 "+response.data)
+              }
+            })
+            .catch((error) => {
+              this.$message.error("服务器错误 "+ error.message)
+            });
+          }
+          else {
+            this.$message.error('请填写完整信息！');
+          }
+        });
+      } 
+      else {
+        // 处理多收款任务
+        this.$refs.fetchForm.validate((valid) => {
+          if (valid) {
+            const extraValidations = this.fetchForm.extraPayers.map((payer, index) => {
+              return new Promise((resolve, reject) => {
+                const rules = this.dynamicRules[index]?.infofetchee;
+                if (!rules) {
+                  resolve(true);
+                  return;
+                }
+                this.$refs[`extraForm${index}`].validateField(`extraPayers[${index}].infofetchee`, (error) => {
+                  if (error) {
+                    reject(error);
+                  } else {
+                    resolve(true);
+                  }
+                });
+              });
+            });
+
+            Promise.all(extraValidations)
+            .then(() => {
+              axios.post("/api/multiFetch", {
+                username: this.nowUser,
+                fetchForm:this.fetchForm
+              })//URL
+              .then(response =>{
+                if (response.status === 200){
+                  this.$message.success("收款成功");
+                  this.fetchOutForm = response.data;
+                  this.fetchOutVisible = true;
+                  this.dialogOfFetchVisible = false;
+                }else{
+                  this.$message.error("转账失败 "+response.data)
+                }
+              })
+              .catch((error) => {
+                this.$message.error("服务器错误 "+ error.message)
+              });
+            })
+            .catch((error) => {
+              this.$message.error("请检查付款方信息是否填写完整"+ error.message);
+            });
+          } else {
+            this.$message.error("请检查表单信息是否填写完整");
+          }
+        });
+      }
+    },
+
+    addNewPayer() {
+      this.fetchForm.extraPayers.push({
+      infofetchee: "",
+      fetcheeType: "email",
+      amount: ""});
+      this.dynamicRules.push({
+        infofetchee: [
+        { required: true, message: "付款方不能为空", trigger: "blur" },
+          {
+            validator: (rule, value, callback) => {
+              const index = this.dynamicRules.length - 1;
+              this.typeCheck(rule, value, callback, this.fetchForm.extraPayers[index].fetcheeType);
+            },
+            trigger: "blur",
+          },
+        ],
+      });
+    },
+
+    removePayer(index) {
+      this.fetchForm.extraPayers.splice(index, 1);
+      this.dynamicRules.splice(index, 1);
+    },
+
+    typeCheck(rule, value, callback, type) {
+      if (type === 'email') {
+        const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+        if (!emailRegex.test(value)) {
+          callback(new Error('请输入有效的邮箱地址'));
+        } else {
+          callback();
+        }
+      } else if (type === 'phone') {
+        const phoneRegex = /^\d{11}$/;
+        if (!phoneRegex.test(value)){
+          callback(new Error('手机号必须为11位纯数字'));
+        } else {
+          callback();
+        }
+      } else {
+        callback();
+      }
     }
   }
 };

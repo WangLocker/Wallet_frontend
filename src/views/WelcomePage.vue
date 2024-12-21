@@ -125,7 +125,7 @@ swIDAQAB
               if(loginResponse.status===200){
                 
                 // TODO: 从后端获取email对应的username
-                // axios.get('/userofemail', this.loginForm.account).then(response => {
+                // axios.get('/qry/userofemail', this.loginForm.account).then(response => {
                 //     const username = response.data;
                 //     localStorage.setItem("loggedInUser", JSON.stringify({
                 //     username: username,
