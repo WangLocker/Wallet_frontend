@@ -438,15 +438,10 @@ export default {
       dialogOfFetchVisible: false,
       dialogOfTransVisible: false,
       dialogOfQuery: false,
-      dialogOfAddCard: true,
+      dialogOfAddCard: false,
       payOutVisible: false,
       fetchOutVisible: false,
       tableData: [
-        {
-          card_num: '1111111111111111',
-          status: '点此验证',
-          bank: '志邈银行'
-        }
       ],
         // 状态正常 | 点此验证
         // {
@@ -454,17 +449,17 @@ export default {
         //   status: '状态正常',
         //   bank: '志邈银行'
         // },
-      tableData_trans:[{trans_num: '1234567890', status: 'complete'}],
+      tableData_trans:[],
         // { trans_num: '1234567890', status: 'expired'},
-      main_card: { 'card_prio': 0, 'card_num': '0000000000000000', 'card_status': 1 },
+      main_card: {},
         // 0 正常 1 验证 其他 异常
         // { 'card_prio': 0, 'card_num': '0000000000000000', 'card_status': 1 }
-      other_cards: [{ 'card_prio': 1, 'card_num': '1111111111111111', 'card_status': 0 }],
+      other_cards: [],
         // { 'card_prio': 1, 'card_num': '1111111111111111', 'card_status': 0 }
       stats: {
         transCount: 0, //月度交易笔数
-        totalReceived: 1.0, //收款总额
-        totalTransferred: 2.0 //转出总额
+        totalReceived: 0.0, //收款总额
+        totalTransferred: 0.0 //转出总额
         },
       last_op_card: -1,  // 保存上次操作的card_number
       emailCode: '',     // 保存中间输入
@@ -675,7 +670,7 @@ export default {
 
     getRequest(user) {
       // 获取与当前id有关的请求
-      axios.post('/api/getRequest', user)
+      axios.get('/api/getRequest', user)
       .then((response) => {
         if (response.status === 200) {
           this.transForm = response.data;
