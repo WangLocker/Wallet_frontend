@@ -441,8 +441,7 @@ export default {
       dialogOfAddCard: false,
       payOutVisible: false,
       fetchOutVisible: false,
-      tableData: [
-      ],
+      tableData: [],
         // 状态正常 | 点此验证
         // {
         //   card_num: '1111111111111111',
@@ -568,7 +567,7 @@ export default {
   },
   methods: {
     fetchTransData() {
-      axios.post('/qry/getTransactionData', this.nowUser) // 根据实际后端接口调整URL
+      axios.post('/qry/getTransactionData', this.nowUser, {headers: {'Content-Type': 'text/plain'}}) // 根据实际后端接口调整URL
         // 发回的数据包格式
           .then((response) => {
             this.tableData_trans = response.data;
@@ -580,12 +579,18 @@ export default {
     },
 
     fetchCardData(){
-      axios.post('/qry/getCardData', this.nowUser) // URL至后端
+      axios.post('/qry/getCardData', this.nowUser, {headers: {'Content-Type': 'text/plain'}}) // URL至后端
         .then((response) => {
-          const {main_card, tableData, other_cards} = response.data;
-          this.main_card = main_card;
-          this.tableData = tableData;
-          this.other_cards = other_cards;
+          const data = response.data;
+          // 从后端返回的数组中提取数据
+          if(response.status === 201){
+            this.$message.error("请注意添加卡片");
+          }
+          else{
+            this.main_card = data[0] || {}; // 主卡信息
+            this.tableData = data[1] || []; // 表格数据
+            this.other_cards = data[2] || {}; // 其他信息
+          }
         })
         .catch((error) => {
           //this.$message.error("获取卡数据出错" + error.message);

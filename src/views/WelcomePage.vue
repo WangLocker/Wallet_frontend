@@ -124,15 +124,15 @@ swIDAQAB
               const loginResponse = response;
               if(loginResponse.status===200){
                 
-                axios.post('/qry/userofemail', this.loginForm.account).then(response => {
+                axios.post('/qry/userofemail', this.loginForm.account, {headers: {'Content-Type': 'text/plain'}}).then(response => {
                     const username = response.data;
                     localStorage.setItem("loggedInUser", JSON.stringify({
                     username: username,
                     loginTime: new Date().toISOString()
                   }));//记录当前登录
-                  this.$message.success("登录成功！");
-                  this.$refs.loginForm.resetFields();
-                  this.$router.push("/dashboard");
+                    this.$message.success("登录成功！");
+                    this.$refs.loginForm.resetFields();
+                    this.$router.push("/dashboard");
                 })
                 .catch((error) => {
                   alert('未能访问userofemail' + error.message);
