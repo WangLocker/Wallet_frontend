@@ -670,7 +670,7 @@ export default {
 
     getRequest(user) {
       // 获取与当前id有关的请求
-      axios.get('/api/getRequest', user)
+      axios.get('/qry/getRequest', user)
       .then((response) => {
         if (response.status === 200) {
           this.transForm = response.data;
@@ -692,7 +692,7 @@ export default {
     handleGetDetail(transNum) {
       // 事务详情
       console.log(transNum);
-      axios.get('/api/getDetail', {
+      axios.get('/qry/getDetail', {
         User: this.nowUser,
         transNum: transNum
       })
@@ -716,7 +716,7 @@ export default {
     },
 
     addCard() {
-      axios.post('/api/addCard', {
+      axios.post('/req/addCard', {
         User: this.nowUser,
         CardData: this.addCardData
       })
@@ -736,7 +736,7 @@ export default {
     handleTrans(index) {
       // 处理事务
       console.log('点击了处理事务' + index);
-      axios.post('/api/handleTrans', {
+      axios.post('/req/handleTrans', {
         User: this.nowUser,
         Trans: this.transForm[index]
       })
@@ -789,7 +789,7 @@ export default {
         // 处理单收款事务
         this.$refs.fetchForm.validate((valid) =>{
           if (valid) {
-            axios.post("/api/singleFetch", {
+            axios.post("/req/singleFetch", {
               username: this.nowUser,
               fetchForm:this.fetchForm
             })//URL
@@ -835,7 +835,7 @@ export default {
 
             Promise.all(extraValidations)
             .then(() => {
-              axios.post("/api/multiFetch", {
+              axios.post("/req/multifetch", {
                 username: this.nowUser,
                 fetchForm:this.fetchForm
               })//URL
