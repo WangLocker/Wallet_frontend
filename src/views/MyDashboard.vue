@@ -428,7 +428,7 @@
 </template>
 
 <script>
-import axios from "axios";
+import axios from "@/api/axios"; // 导入 Axios 实例
 
 export default {
   data() {

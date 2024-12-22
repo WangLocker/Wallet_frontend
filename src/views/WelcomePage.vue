@@ -120,7 +120,7 @@ swIDAQAB
             Object.keys(this.loginForm).forEach((key) => {
               encryptedFormData[key] = encryptor.encrypt(this.loginForm[key]);
             });
-            axios.post("/login", encryptedFormData).then(response => {
+            axios.post("/api/login", encryptedFormData).then(response => {
               const loginResponse = response;
               if(loginResponse.status===200){
                 
@@ -131,7 +131,7 @@ swIDAQAB
                     loginTime: new Date().toISOString()
                   }));//记录当前登录
                 })
-                .catch((error) => {alert('服务器错误' + error.message);});
+                .catch((error) => {alert('未能访问userofemail' + error.message);});
                 
                 localStorage.setItem("loggedInUser", JSON.stringify({
                   username: this.loginForm.account,
