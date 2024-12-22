@@ -678,7 +678,7 @@ export default {
     handleTransClick(){
       // 处理请求
       console.log('点击了处理请求卡片');
-      if(this.getRequest(this.nowUser)) {this.dialogOfTransVisible = true;}
+      this.getRequest(this.nowUser);
     },
 
     getRequest(user) {
@@ -688,11 +688,14 @@ export default {
         if (response.status === 200) {
           this.transForm = response.data;
           if(response.data.length === 0) 
-          { this.$message.error('暂无请求')
+          { this.$message.error('暂无请求');
             return false;}
-          return true;
+          else{
+            this.dialogOfTransVisible = true;
+            return true;
+          }
         } else {
-          this.$message.error('获取失败')
+          this.$message.error('获取失败');
           return false;
         }
       })
@@ -812,6 +815,7 @@ export default {
                 this.fetchOutForm = response.data;
                 this.fetchOutVisible = true;
                 this.dialogOfFetchVisible = false;
+                console.log(response.data);
               }else{
                 this.$message.error("转账失败 "+response.data)
               }
