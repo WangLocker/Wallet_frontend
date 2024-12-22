@@ -159,7 +159,7 @@ swIDAQAB
             Object.keys(this.registerForm).forEach((key) => {
               encryptedFormData[key] = encryptor.encrypt(this.registerForm[key]);
             });
-            axios.post("/register", encryptedFormData).then(response => {
+            axios.post("/api/register", encryptedFormData).then(response => {
               const registrationResponse = response;
               if(registrationResponse.status===200){
                 this.$message.success("注册成功！");

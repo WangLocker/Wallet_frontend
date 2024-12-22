@@ -130,16 +130,14 @@ swIDAQAB
                     username: username,
                     loginTime: new Date().toISOString()
                   }));//记录当前登录
+                  this.$message.success("登录成功！");
+                  this.$refs.loginForm.resetFields();
+                  this.$router.push("/dashboard");
                 })
-                .catch((error) => {alert('未能访问userofemail' + error.message);});
-                
-                localStorage.setItem("loggedInUser", JSON.stringify({
-                  username: this.loginForm.account,
-                  loginTime: new Date().toISOString()
-                }));//记录当前登录
-                this.$message.success("登录成功！");
-                this.$refs.loginForm.resetFields();
-                this.$router.push("/dashboard");
+                .catch((error) => {
+                  alert('未能访问userofemail' + error.message);
+                  return;
+                });
               }
               if(loginResponse.status===202){
                 this.$message.error(loginResponse.data);
