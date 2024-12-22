@@ -570,7 +570,13 @@ export default {
       axios.post('/qry/getTransactionData', this.nowUser, {headers: {'Content-Type': 'text/plain'}}) // 根据实际后端接口调整URL
         // 发回的数据包格式
           .then((response) => {
+            if(response.status === 201){
+            this.$message.error("用户异常");
+          }else if(response.status === 202){
+            this.$message.error("用户异常");
+          }else{
             this.tableData_trans = response.data;
+          }
           })
           .catch((error) => {
             //this.$message.error("获取事务数据出错" + error.message);
@@ -585,6 +591,8 @@ export default {
           // 从后端返回的数组中提取数据
           if(response.status === 201){
             this.$message.error("请注意添加卡片");
+          }else if(response.status === 202){
+            this.$message.error("请求失败");
           }
           else{
             this.main_card = data[0] || {}; // 主卡信息
