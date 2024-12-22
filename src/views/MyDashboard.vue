@@ -609,14 +609,12 @@ export default {
     fetchStatisticalData(){
       axios.post('/qry/getMonthlyStats', this.nowUser) // URL至后端
         .then((response) => {
-          const { transCount, totalReceived, totalTransferred } = response.data;
-          this.stats.transCount = transCount
-          this.stats.totalReceived = totalReceived
-          this.stats.totalTransferred = totalTransferred
+          this.stats.transCount = response.data[0] || 0;
+          this.stats.totalReceived = response.data[1] || 0;
+          this.stats.totalTransferred = response.data[2] || 0;
         })
         .catch((error) => {
-          //this.$message.error("获取统计数据出错" + error.message);
-          console.error('-', error);
+          this.$message.error("获取统计数据出错" + error.message);
         });
     },
 
@@ -757,6 +755,7 @@ export default {
         Trans: this.transForm[index]
       })
       .then(response => {
+        console.log(this.transForm[index])
         if(response.status === 200) {
           this.$message.success("处理成功");
           this.getRequest(this.nowUser)
