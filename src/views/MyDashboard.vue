@@ -835,7 +835,7 @@ export default {
 
             Promise.all(extraValidations)
             .then(() => {
-              axios.post("/req/multifetch", {
+              axios.post("/req/multiFetch", {
                 username: this.nowUser,
                 fetchForm:this.fetchForm
               })//URL
