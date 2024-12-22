@@ -568,7 +568,7 @@ export default {
   },
   methods: {
     fetchTransData() {
-      axios.get('/qry/getTransactionData', this.nowUser) // 根据实际后端接口调整URL
+      axios.post('/qry/getTransactionData', this.nowUser) // 根据实际后端接口调整URL
         // 发回的数据包格式
           .then((response) => {
             this.tableData_trans = response.data;
@@ -580,7 +580,7 @@ export default {
     },
 
     fetchCardData(){
-      axios.get('/qry/getCardData', this.nowUser) // URL至后端
+      axios.post('/qry/getCardData', this.nowUser) // URL至后端
         .then((response) => {
           const {main_card, tableData, other_cards} = response.data;
           this.main_card = main_card;
@@ -594,7 +594,7 @@ export default {
     },
 
     fetchStatisticalData(){
-      axios.get('/qry/getMonthlyStats', this.nowUser) // URL至后端
+      axios.post('/qry/getMonthlyStats', this.nowUser) // URL至后端
         .then((response) => {
           const { transCount, totalReceived, totalTransferred } = response.data;
           this.stats.transCount = transCount
@@ -670,7 +670,7 @@ export default {
 
     getRequest(user) {
       // 获取与当前id有关的请求
-      axios.get('/qry/getRequest', user)
+      axios.post('/qry/getRequest', user)
       .then((response) => {
         if (response.status === 200) {
           this.transForm = response.data;
@@ -692,7 +692,7 @@ export default {
     handleGetDetail(transNum) {
       // 事务详情
       console.log(transNum);
-      axios.get('/qry/getDetail', {
+      axios.post('/qry/getDetail', {
         User: this.nowUser,
         transNum: transNum
       })

@@ -124,7 +124,7 @@ swIDAQAB
               const loginResponse = response;
               if(loginResponse.status===200){
                 
-                axios.get('/qry/userofemail', this.loginForm.account).then(response => {
+                axios.post('/qry/userofemail', this.loginForm.account).then(response => {
                     const username = response.data;
                     localStorage.setItem("loggedInUser", JSON.stringify({
                     username: username,
