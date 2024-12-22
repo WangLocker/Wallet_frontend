@@ -832,7 +832,7 @@ export default {
                   this.fetchOutVisible = true;
                   this.dialogOfFetchVisible = false;
                 }else{
-                  this.$message.error("转账失败 "+response.data)
+                  this.$message.error("收款成功 "+response.data)
                 }
               })
               .catch((error) => {
