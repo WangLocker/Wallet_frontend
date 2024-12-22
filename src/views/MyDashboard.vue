@@ -625,7 +625,7 @@ export default {
       }) // URL至后端
       .then((response) => {
       // 处理成功响应
-      if (response.data.success) {
+      if (response.status === 200) {
         this.$message.success("银行卡验证成功");
         this.dialogOfcardVerifyVisible = false; // 关闭对话框
         this.fetchCardData(); // 更新卡片状态
@@ -821,25 +821,6 @@ export default {
         // 处理多收款任务
         this.$refs.fetchForm.validate((valid) => {
           if (valid) {
-            const extraValidations = this.fetchForm.extraPayers.map((payer, index) => {
-              return new Promise((resolve, reject) => {
-                const rules = this.dynamicRules[index]?.infofetchee;
-                if (!rules) {
-                  resolve(true);
-                  return;
-                }
-                this.$refs[`extraForm${index}`].validateField(`extraPayers[${index}].infofetchee`, (error) => {
-                  if (error) {
-                    reject(error);
-                  } else {
-                    resolve(true);
-                  }
-                });
-              });
-            });
-
-            Promise.all(extraValidations)
-            .then(() => {
               axios.post("/req/multiFetch", {
                 username: this.nowUser,
                 fetchForm:this.fetchForm
@@ -857,13 +838,9 @@ export default {
               .catch((error) => {
                 this.$message.error("服务器错误 "+ error.message)
               });
-            })
-            .catch((error) => {
-              this.$message.error("请检查付款方信息是否填写完整"+ error.message);
-            });
-          } else {
-            this.$message.error("请检查表单信息是否填写完整");
-          }
+            } else {
+              this.$message.error("请检查表单信息是否填写完整");
+            }
         });
       }
     },
