@@ -50,6 +50,9 @@
           <el-form-item label="转账金额" prop="amount">
             <el-input v-model="payForm.amount" placeholder="转账金额"></el-input>
           </el-form-item>
+          <el-form-item label="付款卡" prop="paycard">
+            <el-input v-model="payForm.paycard" :placeholder="this.main_card.card_num"></el-input>
+          </el-form-item>
           <el-form-item label="备注" prop="memo">
             <el-input v-model="payForm.memo" placeholder="备注(可选)"></el-input>
           </el-form-item>
@@ -121,17 +124,19 @@
       width="30%"
       center
       >
+      <el-input v-model="handle_card" placeholder="输入卡号"></el-input>
       <div v-for="(trans, index) in transForm" :key="index">
         <el-divider content-position="left">请求 {{ index + 1 }}</el-divider>
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="收款编号">{{ trans.t_id }}</el-descriptions-item>
+          <el-descriptions-item label="事务编号">{{ trans.t_id }}</el-descriptions-item>
+          <el-descriptions-item label="事务类型">{{ trans.t_type }}</el-descriptions-item>
           <el-descriptions-item label="需求方 ID">{{ trans.t_requester_id }}</el-descriptions-item>
           <el-descriptions-item label="付款方 ID">{{ trans.t_recipient_id }}</el-descriptions-item>
           <el-descriptions-item label="收款金额">{{ parseFloat(trans.t_amount).toFixed(2) }} $</el-descriptions-item>
           <el-descriptions-item label="备注">{{ trans.t_memo }}</el-descriptions-item>
         </el-descriptions>
         <el-button @click="handleTrans(index)" type="primary" center>
-                    处理付款
+                    处理事务
         </el-button>
       </div>
       <template #footer>
@@ -158,6 +163,9 @@
           </el-form-item>
           <el-form-item label="收款金额" prop="amount">
             <el-input v-model="fetchForm.amount" placeholder="收款金额"></el-input>
+          </el-form-item>
+          <el-form-item label="付款卡" prop="paycard">
+            <el-input v-model="fetchForm.fetchcard" :placeholder="this.main_card.card_num"></el-input>
           </el-form-item>
           <el-form-item label="添加">
             <el-button type="primary" @click="addNewPayer">+</el-button>
@@ -198,7 +206,9 @@
       >
       <el-descriptions :column="1" border>
         <el-descriptions-item label="发送方 ID">{{ queryForm.q_sender }}</el-descriptions-item>
+        <el-descriptions-item label="发送方 卡号">{{ queryForm.q_sender_card }}</el-descriptions-item>
         <el-descriptions-item label="接收方 ID">{{ queryForm.q_receiver }}</el-descriptions-item>
+        <el-descriptions-item label="接收方 卡号">{{ queryForm.q_receiver_card }}</el-descriptions-item>
         <el-descriptions-item label="事务类型">{{ queryForm.q_type }}</el-descriptions-item>
         <el-descriptions-item label="金额">{{ parseFloat(queryForm.q_amount).toFixed(2) }} $</el-descriptions-item>
         <el-descriptions-item label="备注">{{ queryForm.q_memo }}</el-descriptions-item>
@@ -246,8 +256,9 @@
             <a-card-meta>
               <template #title>
                 <div style="display: flex; align-items: center;">
-                  <span>Main Card</span>
+                  <span style="margin-right: 10px;">Main Card</span>
                   <!-- 在这里插入之前用于根据状态渲染tag的部分 -->
+                  <div class="money">余额：{{ main_card.money }}</div>
                   <template v-if="main_card">
                     <a-tag
                         v-if="main_card.card_status === 0"
@@ -298,12 +309,12 @@
               <el-table-column
                   prop="card_num"
                   label="卡号"
-                  width="180">
+                  width="140">
               </el-table-column>
               <el-table-column
                   prop="status"
                   label="卡状态"
-                  width="120">
+                  width="100">
                 <template v-slot="scope">
                   <el-tag
                       v-if="scope.row.status!== '点此验证'"
@@ -318,7 +329,12 @@
               <el-table-column
                   prop="bank"
                   label="所属银行"
-                  width="150">
+                  width="120">
+              </el-table-column>
+              <el-table-column
+                  prop="money"
+                  label="余额"
+                  width="90">
               </el-table-column>
             </el-table>
 
@@ -330,12 +346,24 @@
                 <el-table-column
                     prop="trans_num"
                     label="事务流水号"
-                    width="180">
+                    width="150">
                 </el-table-column>
+                <el-table-column
+          prop="trans_num"
+          label="类型"
+          width="120">
+        <template v-slot="scope">
+          <div
+            :class="scope.row.trans_num.startsWith('1') ? 'request-tag' : 'payment-tag'"
+          >
+            {{ scope.row.trans_num.startsWith('1') ? 'Request' : 'Payment' }}
+          </div>
+        </template>
+      </el-table-column>
                 <el-table-column
                     prop="status"
                     label="事务状态"
-                    width="120">
+                    width="90">
                   <template v-slot="scope">
                     <el-tag
                         v-if="scope.row.status === 'pending'"
@@ -362,7 +390,7 @@
                 <el-table-column
                     prop="info"
                     label="详细信息"
-                    width="150">
+                    width="120">
                   <template v-slot="scope">
                     <el-button
                         type="primary"
@@ -424,6 +452,89 @@
 
       </div>
     </a-layout-content>
+
+    <a-layout-content class="search-content">
+      <div class="search-section">
+        <el-card class="search-card">
+          <h4>事务检索</h4>
+          <el-form :model="searchForm" class="horizontal-form" inline>
+            <!-- 关键词 -->
+            <el-form-item label="关键词">
+              <el-input v-model="searchForm.keyword" placeholder="请输入关键词或流水号"></el-input>
+            </el-form-item>
+            <!-- 起始日期 -->
+            <el-form-item label="起始日期">
+              <el-date-picker
+                v-model="searchForm.startDate"
+                type="date"
+                placeholder="选择起始日期">
+              </el-date-picker>
+            </el-form-item>
+            <!-- 结束日期 -->
+            <el-form-item label="结束日期">
+              <el-date-picker
+                v-model="searchForm.endDate"
+                type="date"
+                placeholder="选择结束日期">
+              </el-date-picker>
+            </el-form-item>
+            <!-- 检索按钮 -->
+            <el-form-item>
+              <el-button type="primary" @click="handleSearch">检索</el-button>
+            </el-form-item>
+          </el-form>
+          <el-table
+                  :data="search_result"
+                  style="width: 100%; height: 100%; max-height: 100%;">
+            <el-table-column
+                prop="trans_id"
+                label="事务流水号"
+                width="150">
+            </el-table-column>
+            <el-table-column
+                prop="senderId"
+                label="发送方"
+                width="150">
+            </el-table-column>
+            <el-table-column
+                prop="receiverId"
+                label="接收方"
+                width="150">
+            </el-table-column>
+            <el-table-column
+                prop="type"
+                label="事务类型"
+                width="150">
+            </el-table-column>
+            <el-table-column
+                prop="amount"
+                label="金额"
+                width="150">
+            </el-table-column>
+            <el-table-column
+                prop="memo"
+                label="备注"
+                width="150">
+            </el-table-column>
+            <el-table-column
+                prop="status"
+                label="状态"
+                width="150">
+            </el-table-column>
+            <el-table-column
+                prop="startTime"
+                label="开始时间"
+                width="150">
+            </el-table-column>
+            <el-table-column
+                prop="endTime"
+                label="结束时间"
+                width="150">
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </div>
+    </a-layout-content>
   </a-layout>
 </template>
 
@@ -447,12 +558,13 @@ export default {
         //   card_num: '1111111111111111',
         //   status: '状态正常',
         //   bank: '志邈银行'
+        //   money: 1231,
         // },
       tableData_trans:[],
         // { trans_num: '1234567890', status: 'expired'},
       main_card: {},
         // 0 正常 1 验证 其他 异常
-        // { 'card_prio': 0, 'card_num': '0000000000000000', 'card_status': 1 }
+        // { 'card_prio': 0, 'card_num': '0000000000000000', 'card_status': 1, 'money': 1231 }
       other_cards: [],
         // { 'card_prio': 1, 'card_num': '1111111111111111', 'card_status': 0 }
       stats: {
@@ -461,12 +573,14 @@ export default {
         totalTransferred: 0.0 //转出总额
         },
       last_op_card: -1,  // 保存上次操作的card_number
+      handle_card: '',
       emailCode: '',     // 保存中间输入
       nowUser: 'None',   // 保存当前用户
       payForm: {
         infoPayee: '',
         payeeType: 'email',
         amount: '',
+        paycard: '',
         memo: ''
       },
       payOutForm: {
@@ -486,6 +600,7 @@ export default {
         infofetchee: '',
         fetcheeType: 'email',
         amount: '',
+        fetchcard: '', //收款卡
         memo: '',
         extraPayers: []
       },
@@ -502,13 +617,15 @@ export default {
         f_extraPayers: []
       },
       transForm: [
-      {t_id: '1', t_requester_id: '2', t_recipient_id: '3', t_amount: '4', t_memo: '5'},
-      {t_id: '2', t_requester_id: '3', t_recipient_id: '4', t_amount: '5', t_memo: '6'}
+      {t_id: '1', t_type: 'payment', t_requester_id: '2', t_recipient_id: '3', t_amount: '4', t_memo: '5'},
+      {t_id: '2', t_type: 'request', t_requester_id: '3', t_recipient_id: '4', t_amount: '5', t_memo: '6'}
       ],
       queryForm: {
         q_id: '0',
         q_sender: '1',
+        q_sender_card: '3',
         q_receiver: '2',
+        q_receiver_card: '4',
         q_type: 'payment',
         q_amount: '3',
         q_memo: '4',
@@ -520,6 +637,24 @@ export default {
         a_bank_id: '',
         a_account_num: '',
       },
+      searchForm: {
+        keyword: '', // 检索关键词
+        startDate: '', // 起始日期
+        endDate: '', // 结束日期
+      },
+      // 检索结果
+      search_result: [],
+      // {
+      //   trans_id: '',
+      //   senderId: '',
+      //   receiverId: '',
+      //   type: '',
+      //   amount: '',
+      //   memo: '',
+      //   status: '',
+      //   startTime: '',
+      //   endTime: '',
+      // },
       rules: {
         infoPayee: [
           { required: true, message: '收款方不能为空', trigger: 'blur'},
@@ -749,9 +884,13 @@ export default {
 
     handleTrans(index) {
       // 处理事务
+      if(!this.handle_card) {
+        this.handle_card = this.main_card.card_num
+      }
       console.log('点击了处理事务' + index);
       axios.post('/req/handleTrans', {
         User: this.nowUser,
+        Card: this.handle_card,
         Trans: this.transForm[index]
       })
       .then(response => {
@@ -771,6 +910,10 @@ export default {
 
     async handlePaySubmit() {
       //处理转账事务
+      //默认使用主卡
+      if (!this.payForm.paycard) {
+      this.payForm.paycard = this.main_card.card_num;
+      }
       console.log('提交转账');
       this.$refs.payForm.validate((valid) => {
         if (valid) {
@@ -797,8 +940,31 @@ export default {
       });
     },
 
+    handleSearch() {
+      console.log('事务检索');
+      axios.post('/qry/search_trans', {
+        username: this.nowUser,
+        searchForm: this.searchForm
+      })
+      .then(response =>{
+              if (response.status === 200){
+                this.$message.success("检索成功");
+                this.search_result = response.data;
+                console.log(response.data);
+              }else{
+                this.$message.error("检索失败 "+response.data)
+              }
+          })
+      .catch((error) => {
+        this.$message.error("服务器错误 "+ error.message)
+      });
+    },
+
     handleFetchSubmit() {
       // 处理收款事务
+      if (!this.fetchForm.fetchcard) {
+      this.fetchForm.fetchcard = this.main_card.card_num;
+      }
       console.log('提交收款');
       if (this.fetchForm.extraPayers.length === 0) {
         // 处理单收款事务
@@ -906,8 +1072,6 @@ export default {
 
 <style scoped>
 .tag-button {
-
-
   cursor: pointer; /* 设置鼠标指针为手型，提示可点击 */
 }
 
@@ -985,9 +1149,17 @@ export default {
 
 /* 主体内容样式 */
 .content {
-  padding: 24px;
+  padding: 12px;
 }
-
+.search-content{
+  padding: 6px;
+}
+.horizontal-form {
+  display: flex;
+  flex-wrap: wrap; /* 如果空间不足，可换行展示 */
+  align-items: center;
+  gap: 20px; /* 控制每个元素之间的间距 */
+}
 /* 大容器A样式 */
 .container-a {
   display: flex;
@@ -1069,5 +1241,31 @@ export default {
   text-align: center;
   white-space: nowrap; /*避免换行*/
   height: 30%
+}
+.request-tag {
+  display: inline-block;
+  padding: 4px 8px;
+  color: #ffffff;
+  background-color: #a8cbeb; /* 蓝色背景 */
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.payment-tag {
+  display: inline-block;
+  padding: 4px 8px;
+  color: #ffffff;
+  background-color: #aee194; /* 绿色背景 */
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.search-section {
+  margin-top: 20px;
+}
+
+.search-card {
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 </style>
