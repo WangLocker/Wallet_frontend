@@ -164,7 +164,7 @@
           <el-form-item label="收款金额" prop="amount">
             <el-input v-model="fetchForm.amount" placeholder="收款金额"></el-input>
           </el-form-item>
-          <el-form-item label="付款卡" prop="paycard">
+          <el-form-item label="收款卡" prop="fetchcard">
             <el-input v-model="fetchForm.fetchcard" :placeholder="this.main_card.card_num"></el-input>
           </el-form-item>
           <el-form-item label="添加">
